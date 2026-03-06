@@ -15,6 +15,24 @@ async function listar(req, res, next) {
   }
 }
 
+async function registrar(req, res, next) {
+  try {
+    const usuarioId = req.usuario.id
+    const titulo = req.body.titulo
+    const descricao = req.body.descricao
+
+    const resultado = await servicoTarefas.registrarTarefa({
+      usuarioId, titulo, descricao
+    })
+
+    return res.status(201).json(resultado)
+  } catch (erro) {
+    next(erro)
+  }
+}
+
+
+
 module.exports = {
-  listar
+  listar, registrar
 }

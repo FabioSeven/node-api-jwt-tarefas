@@ -43,6 +43,21 @@ async function listarTarefas({ usuarioId, query }) {
   }
 }
 
+//TIPO INSERT INTO tarefa (usuarioId, titulo, descricao) VALUES (...)
+async function registrarTarefa({ usuarioId, titulo, descricao }) {
+  if (!usuarioId) throw erro(400, "Usuário não autenticado")
+  if (!titulo) throw erro(400, "Título não pode ser vazio")
+  if (!descricao) throw erro(400, "Descrição não pode ser vazia")
+
+  try {
+    const tarefa = await prisma.tarefa.create({ data: { usuarioId, titulo, descricao } })
+    return { id: tarefa.id, titulo: tarefa.titulo }
+  } catch (e) {
+  throw erro(500, "Erro ao registrar tarefa")
+}
+}
+
 module.exports = {
-  listarTarefas
+  listarTarefas,
+  registrarTarefa
 }
