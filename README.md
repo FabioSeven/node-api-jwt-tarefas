@@ -33,7 +33,7 @@ prisma/
 
 1. Clone o repositório
 
-git clone https://github.com/seuusuario/api-tarefas-node.git
+git clone https://github.com/FabioSeven/node-api-jwt-tarefas
 
 2. Instale as dependências
 
