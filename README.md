@@ -4,6 +4,8 @@ API REST construída em Node.js para gerenciamento de tarefas com autenticação
 
 Projeto criado para estudo de boas práticas em APIs Node.js.
 
+https://fabioseven-8086414.postman.co/workspace/085ac6c9-f21f-4143-8be1-5c8516b1f108/collection/48422337-5ceb770d-af24-42c5-8b88-ff1d18b80ca5?action=share&source=copy-link&creator=48422337
+
 ## Tecnologias
 
 - Node.js
