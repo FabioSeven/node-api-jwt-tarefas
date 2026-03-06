@@ -1,0 +1,112 @@
+const prisma = require("../banco/prisma")
+const { gerarHash, compararHash } = require("../utils/criptografia")
+const { gerarAccessToken, gerarRefreshToken, extrairIdESegredo, calcularDataExpiracaoEmDias } = require("../utils/tokens")
+
+function erro(status, mensagem) {
+  const e = new Error(mensagem)
+  e.status = status
+  e.mensagem = mensagem
+  return e
+}
+
+async function registrar({ email, senha }) {
+  if (!email || !senha) throw erro(400, "email e senha são obrigatórios")
+  const senhaHash = await gerarHash(senha)
+  try {
+    const usuario = await prisma.usuario.create({ data: { email, senhaHash } })
+    return { id: usuario.id, email: usuario.email }
+  } catch {
+    throw erro(409, "email já cadastrado")
+  }
+}
+
+async function login({ email, senha }) {
+  if (!email || !senha) throw erro(400, "email e senha são obrigatórios")
+
+  const usuario = await prisma.usuario.findUnique({ where: { email } })
+  if (!usuario) throw erro(401, "credenciais inválidas")
+
+  const ok = await compararHash(senha, usuario.senhaHash)
+  if (!ok) throw erro(401, "credenciais inválidas")
+
+  const accessToken = gerarAccessToken(usuario)
+
+  const { id, token: refreshToken, segredo } = gerarRefreshToken()
+  const tokenHash = await gerarHash(segredo)
+
+  await prisma.refreshToken.create({
+    data: {
+      id,
+      usuarioId: usuario.id,
+      tokenHash,
+      expiraEm: calcularDataExpiracaoEmDias(process.env.REFRESH_EXPIRA_DIAS)
+    }
+  })
+
+  return { accessToken, refreshToken }
+}
+
+async function atualizarToken(refreshTokenRecebido) {
+  const partes = extrairIdESegredo(refreshTokenRecebido)
+  if (!partes) throw erro(401, "refreshToken inválido")
+
+  const { id, segredo } = partes
+
+  const registro = await prisma.refreshToken.findUnique({
+    where: { id },
+    include: { usuario: true }
+  })
+  if (!registro) throw erro(401, "refreshToken inválido")
+
+  if (registro.revogadoEm) {
+    await prisma.refreshToken.updateMany({
+      where: { usuarioId: registro.usuarioId, revogadoEm: null },
+      data: { revogadoEm: new Date() }
+    })
+    throw erro(401, "refreshToken reutilizado. Faça login novamente.")
+  }
+
+  if (registro.expiraEm <= new Date()) {
+    await prisma.refreshToken.update({ where: { id: registro.id }, data: { revogadoEm: new Date() } })
+    throw erro(401, "refreshToken expirado. Faça login novamente.")
+  }
+
+  const confere = await compararHash(segredo, registro.tokenHash)
+  if (!confere) throw erro(401, "refreshToken inválido")
+
+  // rotação
+  const { id: novoId, token: novoRefresh, segredo: novoSegredo } = gerarRefreshToken()
+  const novoHash = await gerarHash(novoSegredo)
+
+  await prisma.$transaction([
+    prisma.refreshToken.update({
+      where: { id: registro.id },
+      data: { revogadoEm: new Date(), substituidoPorId: novoId }
+    }),
+    prisma.refreshToken.create({
+      data: {
+        id: novoId,
+        usuarioId: registro.usuarioId,
+        tokenHash: novoHash,
+        expiraEm: calcularDataExpiracaoEmDias(process.env.REFRESH_EXPIRA_DIAS)
+      }
+    })
+  ])
+
+  const accessToken = gerarAccessToken(registro.usuario)
+  return { accessToken, refreshToken: novoRefresh }
+}
+
+async function logout(refreshTokenRecebido) {
+  const partes = extrairIdESegredo(refreshTokenRecebido)
+  if (!partes) return { ok: true }
+
+  await prisma.refreshToken.updateMany({
+    where: { id: partes.id, revogadoEm: null },
+    data: { revogadoEm: new Date() }
+  })
+
+  return { ok: true }
+}
+
+module.exports = { registrar, login, atualizarToken, logout }

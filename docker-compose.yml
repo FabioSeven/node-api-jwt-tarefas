@@ -1,0 +1,15 @@
+services:
+  api:
+    build: .
+    container_name: api_auth_jwt_refresh
+    environment:
+      NODE_ENV: ${NODE_ENV}
+      PORT: ${PORT}
+      DATABASE_URL: ${DATABASE_URL}
+      JWT_SECRETO: ${JWT_SECRETO}
+      JWT_EXPIRA_EM: ${JWT_EXPIRA_EM}
+      REFRESH_EXPIRA_DIAS: ${REFRESH_EXPIRA_DIAS}
+      COOKIE_SAMESITE: ${COOKIE_SAMESITE}
+      COOKIE_SECURE: ${COOKIE_SECURE}
+    ports:
+      - "${PORT}:${PORT}"
