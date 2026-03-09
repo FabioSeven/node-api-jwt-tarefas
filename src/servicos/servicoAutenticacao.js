@@ -24,6 +24,12 @@ async function registrar({ email, senha }) {
 
     return { id: usuario.id, email: usuario.email }
   } catch (e) {
+    console.error("Erro real ao registrar usuário:", {
+      code: e?.code,
+      message: e?.message,
+      meta: e?.meta
+    })
+
     if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") {
       throw criarErro(409, "email já cadastrado")
     }
