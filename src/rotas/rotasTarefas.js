@@ -1,11 +1,13 @@
 const express = require("express")
 const c = require("../controladores/controladorTarefas")
+
 const r = express.Router()
 
-r.post("/registrar", c.registrar)
 r.get("/listar", c.listar)
-//r.get("/buscar/:id", c.atualizarToken)
-//r.put("/alterar/:id", c.logout)
-//r.delete("/excluir/:id",)
+r.get("/:id", c.buscarPorId)
+r.post("/registrar", c.registrar)
+r.put("/:id", c.alterar)
+r.patch("/:id", c.alterar)
+r.delete("/:id", c.remover)
 
 module.exports = r

@@ -1,33 +1,49 @@
+const { Prisma } = require("@prisma/client")
 const prisma = require("../banco/prisma")
 const { gerarHash, compararHash } = require("../utils/criptografia")
 const { gerarAccessToken, gerarRefreshToken, extrairIdESegredo, calcularDataExpiracaoEmDias } = require("../utils/tokens")
+const { criarErro } = require("../utils/erros")
 
-function erro(status, mensagem) {
-  const e = new Error(mensagem)
-  e.status = status
-  e.mensagem = mensagem
-  return e
+function normalizarEmail(email) {
+  return String(email || "").trim().toLowerCase()
 }
 
 async function registrar({ email, senha }) {
-  if (!email || !senha) throw erro(400, "email e senha são obrigatórios")
+  const emailNormalizado = normalizarEmail(email)
+
+  if (!emailNormalizado || !senha) {
+    throw criarErro(400, "email e senha são obrigatórios")
+  }
+
   const senhaHash = await gerarHash(senha)
+
   try {
-    const usuario = await prisma.usuario.create({ data: { email, senhaHash } })
+    const usuario = await prisma.usuario.create({
+      data: { email: emailNormalizado, senhaHash }
+    })
+
     return { id: usuario.id, email: usuario.email }
-  } catch {
-    throw erro(409, "email já cadastrado")
+  } catch (e) {
+    if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") {
+      throw criarErro(409, "email já cadastrado")
+    }
+
+    throw criarErro(500, "erro interno ao registrar usuário")
   }
 }
 
 async function login({ email, senha }) {
-  if (!email || !senha) throw erro(400, "email e senha são obrigatórios")
+  const emailNormalizado = normalizarEmail(email)
 
-  const usuario = await prisma.usuario.findUnique({ where: { email } })
-  if (!usuario) throw erro(401, "credenciais inválidas")
+  if (!emailNormalizado || !senha) {
+    throw criarErro(400, "email e senha são obrigatórios")
+  }
+
+  const usuario = await prisma.usuario.findUnique({ where: { email: emailNormalizado } })
+  if (!usuario) throw criarErro(401, "credenciais inválidas")
 
   const ok = await compararHash(senha, usuario.senhaHash)
-  if (!ok) throw erro(401, "credenciais inválidas")
+  if (!ok) throw criarErro(401, "credenciais inválidas")
 
   const accessToken = gerarAccessToken(usuario)
 
@@ -48,7 +64,7 @@ async function login({ email, senha }) {
 
 async function atualizarToken(refreshTokenRecebido) {
   const partes = extrairIdESegredo(refreshTokenRecebido)
-  if (!partes) throw erro(401, "refreshToken inválido")
+  if (!partes) throw criarErro(401, "refreshToken inválido")
 
   const { id, segredo } = partes
 
@@ -56,25 +72,24 @@ async function atualizarToken(refreshTokenRecebido) {
     where: { id },
     include: { usuario: true }
   })
-  if (!registro) throw erro(401, "refreshToken inválido")
+  if (!registro) throw criarErro(401, "refreshToken inválido")
 
   if (registro.revogadoEm) {
     await prisma.refreshToken.updateMany({
       where: { usuarioId: registro.usuarioId, revogadoEm: null },
       data: { revogadoEm: new Date() }
     })
-    throw erro(401, "refreshToken reutilizado. Faça login novamente.")
+    throw criarErro(401, "refreshToken reutilizado. Faça login novamente.")
   }
 
   if (registro.expiraEm <= new Date()) {
     await prisma.refreshToken.update({ where: { id: registro.id }, data: { revogadoEm: new Date() } })
-    throw erro(401, "refreshToken expirado. Faça login novamente.")
+    throw criarErro(401, "refreshToken expirado. Faça login novamente.")
   }
 
   const confere = await compararHash(segredo, registro.tokenHash)
-  if (!confere) throw erro(401, "refreshToken inválido")
+  if (!confere) throw criarErro(401, "refreshToken inválido")
 
-  // rotação
   const { id: novoId, token: novoRefresh, segredo: novoSegredo } = gerarRefreshToken()
   const novoHash = await gerarHash(novoSegredo)
 
