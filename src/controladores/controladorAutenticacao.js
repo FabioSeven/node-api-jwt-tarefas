@@ -7,8 +7,13 @@ function getCookieOptions() {
 
   return {
     httpOnly: true,
+<<<<<<< HEAD
     secure,
     sameSite,
+=======
+    secure: process.env.NODE_ENV === "production",
+    sameSite: process.env.COOKIE_SAMESITE || "lax",
+>>>>>>> 8ebf7b9cd33e3b2137ebca37a374cbd91e0d7874
     path: "/auth",
     maxAge: Number(process.env.REFRESH_EXPIRA_DIAS || 7) * 24 * 60 * 60 * 1000
   }
@@ -57,7 +62,11 @@ exports.logout = async (req, res, next) => {
     await servico.logout(req.cookies.refresh_token)
     limparCookie(res)
     res.json({ ok: true })
+<<<<<<< HEAD
   } catch (e) {
     next(e)
   }
+=======
+  } catch (e) { next(e) }
+>>>>>>> 8ebf7b9cd33e3b2137ebca37a374cbd91e0d7874
 }
