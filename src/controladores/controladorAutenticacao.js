@@ -3,8 +3,8 @@ const servico = require("../servicos/servicoAutenticacao")
 function setarCookie(res, refreshToken) {
   res.cookie("refresh_token", refreshToken, {
     httpOnly: true,
-    secure: false,      // local http
-    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+    sameSite: process.env.COOKIE_SAMESITE || "lax",
     path: "/auth",
     maxAge: Number(process.env.REFRESH_EXPIRA_DIAS || 7) * 24 * 60 * 60 * 1000
   })

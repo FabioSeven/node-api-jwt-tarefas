@@ -2,10 +2,19 @@ const jwt = require("jsonwebtoken")
 const crypto = require("crypto")
 const { v4: uuidv4 } = require("uuid")
 
+function obterSegredoJwt() {
+  return process.env.JWT_ACCESS_SECRET || process.env.JWT_SECRETO
+}
+
 function gerarAccessToken(usuario) {
+  const segredo = obterSegredoJwt()
+  if (!segredo) {
+    throw new Error("JWT_ACCESS_SECRET (ou JWT_SECRETO) não configurado")
+  }
+
   return jwt.sign(
     { id: usuario.id, email: usuario.email },
-    process.env.JWT_SECRETO,
+    segredo,
     { expiresIn: process.env.JWT_EXPIRA_EM || "15m" }
   )
 }
@@ -28,4 +37,4 @@ function calcularDataExpiracaoEmDias(dias) {
   return d
 }
 
-module.exports = { gerarAccessToken, gerarRefreshToken, extrairIdESegredo, calcularDataExpiracaoEmDias }
+module.exports = { gerarAccessToken, gerarRefreshToken, extrairIdESegredo, calcularDataExpiracaoEmDias, obterSegredoJwt }
