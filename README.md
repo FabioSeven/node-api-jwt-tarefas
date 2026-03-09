@@ -1,88 +1,124 @@
 # API de Tarefas com Node.js, JWT e Prisma
 
-API REST construída em Node.js para gerenciamento de tarefas com autenticação JWT, refresh token e PostgreSQL via Prisma.
+API REST para gerenciamento de tarefas com autenticação JWT, rotação de refresh token e PostgreSQL via Prisma.
 
-Projeto criado para estudo de boas práticas em APIs Node.js.
-
-https://fabioseven-8086414.postman.co/workspace/085ac6c9-f21f-4143-8be1-5c8516b1f108/collection/48422337-5ceb770d-af24-42c5-8b88-ff1d18b80ca5?action=share&source=copy-link&creator=48422337
-
-## Tecnologias
+## Stack
 
 - Node.js
 - Express
 - PostgreSQL
 - Prisma ORM
-- JWT (JSON Web Token)
-- Pino (logs)
-- Helmet (segurança)
-- Docker
+- JWT
+- Pino
+- Helmet
+- Render
+- Supabase
 
-- ## Estrutura do projeto
+## Estrutura
 
 src/
- ├ rotas
- ├ controladores
- ├ servicos
- ├ middlewares
- ├ utils
  ├ banco
- └ app.js
+ ├ config
+ ├ controladores
+ ├ middlewares
+ ├ rotas
+ ├ servicos
+ ├ utils
+ ├ app.js
+ └ servidor.js
 
 prisma/
+ ├ migrations
  └ schema.prisma
 
- ## Como rodar o projeto
+## Variáveis de ambiente
 
-1. Clone o repositório
+Use o arquivo `.env.example` como base.
 
-git clone https://github.com/FabioSeven/node-api-jwt-tarefas
+Campos principais:
 
-2. Instale as dependências
+- `DATABASE_URL`: string do Supabase Session pooler (porta 5432)
+- `JWT_ACCESS_SECRET`: segredo do access token
+- `JWT_EXPIRA_EM`: expiração do access token
+- `REFRESH_EXPIRA_DIAS`: dias de validade do refresh token
+- `COOKIE_SAMESITE`: `lax`, `strict` ou `none`
+- `CORS_ORIGIN`: origem do frontend. Pode aceitar mais de uma, separando por vírgula
+- `NODE_ENV`: `development` ou `production`
 
+## Rodando localmente
+
+```bash
 npm install
-
-3. Configure o arquivo .env
-
-DATABASE_URL=
-JWT_SECRETO=
-PORT=3000
-
-4. Execute as migrations
-
-npx prisma migrate dev
-
-5. Inicie o servidor
-
+npm run prisma:generate
+npm run migrate:dev
 npm run dev
+```
 
 ## Endpoints
 
+### Saúde
+
+- `GET /`
+- `GET /health`
+
 ### Autenticação
 
-POST /auth/registrar  
-POST /auth/login  
-POST /auth/refresh  
-POST /auth/logout
+- `POST /auth/registrar`
+- `POST /auth/login`
+- `POST /auth/atualizar-token`
+- `POST /auth/logout`
 
 ### Tarefas
 
-GET /tarefas  
-POST /tarefas  
-GET /tarefas/:id  
-PUT /tarefas/:id  
-DELETE /tarefas/:id
+- `GET /tarefas/listar`
+- `POST /tarefas/registrar`
 
-## Autenticação
+## Deploy no Render
 
-As rotas de tarefas exigem autenticação via Bearer Token.
+Esse projeto está pronto para deploy via Git.
 
-Exemplo de header:
+### Build Command
 
-Authorization: Bearer TOKEN
+```bash
+npm install && npm run prisma:generate
+```
 
-## Melhorias futuras
+### Pre-Deploy Command
 
-- Documentação automática com Swagger
-- Validação de dados com Zod
-- Testes automatizados
-- Deploy em ambiente cloud
+```bash
+npm run migrate:deploy
+```
+
+### Start Command
+
+```bash
+npm start
+```
+
+### Environment Variables
+
+Configure no Render:
+
+- `DATABASE_URL`
+- `JWT_ACCESS_SECRET`
+- `JWT_EXPIRA_EM`
+- `REFRESH_EXPIRA_DIAS`
+- `COOKIE_SAMESITE`
+- `NODE_ENV=production`
+- `CORS_ORIGIN`
+- `RATE_LIMIT_AUTH_MAX`
+
+## Banco no Supabase
+
+Para usar com Prisma em deploy server-based, use a connection string do **Supavisor Session pooler** na porta **5432**.
+
+## Melhorias aplicadas
+
+- `start` separado de migration
+- `render.yaml` pronto
+- `healthCheckPath` configurado
+- CORS configurável por variável de ambiente
+- rate limit nas rotas de autenticação
+- tratamento de 404
+- encerramento gracioso do Prisma
+- `.env.example` incluído
