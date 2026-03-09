@@ -5,6 +5,16 @@ module.exports = function tratarErros(err, req, res, next) {
     return res.status(403).json({ erro: err.message })
   }
 
+  if (err instanceof Prisma.PrismaClientInitializationError) {
+    if (req.log) {
+      req.log.error({ err }, "falha ao inicializar conexão com banco")
+    }
+
+    return res.status(503).json({
+      erro: "banco de dados indisponível"
+    })
+  }
+
   if (err instanceof Prisma.PrismaClientKnownRequestError) {
     if (err.code === "P2002") {
       return res.status(409).json({ erro: "registro duplicado" })
@@ -16,7 +26,7 @@ module.exports = function tratarErros(err, req, res, next) {
   }
 
   const status = err.status || 500
-  const resposta = { erro: err.mensagem || "Erro interno" }
+  const resposta = { erro: err.mensagem || err.message || "Erro interno" }
 
   if (err.detalhes) {
     resposta.detalhes = err.detalhes

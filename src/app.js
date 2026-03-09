@@ -6,6 +6,7 @@ const helmet = require("helmet")
 const pinoHttp = require("pino-http")
 const cors = require("cors")
 
+const prisma = require("./banco/prisma")
 const rotasAutenticacao = require("./rotas/rotasAutenticacao")
 const rotasTarefas = require("./rotas/rotasTarefas")
 const exigirToken = require("./middlewares/exigirToken")
@@ -41,12 +42,29 @@ app.get("/", (req, res) => {
   })
 })
 
-app.get("/health", (req, res) => {
-  res.json({
+app.get("/health", async (req, res) => {
+  const payload = {
     status: "ok",
+    api: "ok",
+    database: "ok",
     uptime: process.uptime(),
     timestamp: new Date().toISOString()
-  })
+  }
+
+  try {
+    await prisma.$queryRaw`SELECT 1`
+    return res.status(200).json(payload)
+  } catch (erro) {
+    if (req.log) {
+      req.log.error({ err: erro }, "health check falhou ao consultar o banco")
+    }
+
+    return res.status(503).json({
+      ...payload,
+      status: "degradado",
+      database: "indisponível"
+    })
+  }
 })
 
 app.use("/auth", rotasAutenticacao)
